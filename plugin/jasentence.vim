@@ -35,7 +35,7 @@ function! s:ForwardS()
   normal! )
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search('[、。，．？！]\+\n\=\s*\S', 'eW') == 0
+  if search('[、。，．？！]\+\n\=\s*\S', 'eW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
@@ -55,7 +55,7 @@ function! s:BackwardS()
   normal! (
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search('[、。，．？！]\+\n\=\s*\zs\S', 'bW') == 0
+  if search('[、。，．？！]\+\n\=\s*\zs\S', 'bW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
