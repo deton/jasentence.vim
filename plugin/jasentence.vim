@@ -80,13 +80,9 @@ function! s:select_a()
     endif
   else
     " sentence開始位置以降を対象にする
-    call s:BackwardS()
-    let prevsent = getpos('.')
+    " (s:BackwardS()だけだと、既にsentence先頭にいる場合に問題あり)
     call s:ForwardS()
-    if !s:pos_eq(getpos('.'), origpos)
-      call setpos('.', prevsent)
-    endif
-    " else 既にsentence開始位置にいた
+    call s:BackwardS()
   endif
   let st = getpos('.')
   call s:MoveCount('<SID>ForwardS')
