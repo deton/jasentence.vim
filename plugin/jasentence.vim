@@ -19,14 +19,14 @@ if exists('g:loaded_jasentence')
   finish
 endif
 
-nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
-nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
-onoremap <silent> <Plug>JaSentenceMoveOF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
-onoremap <silent> <Plug>JaSentenceMoveOB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
+nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS', v:count1)<CR>
+nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS', v:count1)<CR>
+onoremap <silent> <Plug>JaSentenceMoveOF :<C-U>call <SID>MoveCount('<SID>ForwardS', v:count1)<CR>
+onoremap <silent> <Plug>JaSentenceMoveOB :<C-U>call <SID>MoveCount('<SID>BackwardS', v:count1)<CR>
 vnoremap <silent> <Plug>JaSentenceMoveVF <Esc>:call <SID>MoveV('<SID>ForwardS')<CR>
 vnoremap <silent> <Plug>JaSentenceMoveVB <Esc>:call <SID>MoveV('<SID>BackwardS')<CR>
 
-onoremap <silent> <Plug>JaSentenceTextObjA :<C-U>call <SID>select_function_wrapper('<SID>select_a')<CR>
+onoremap <silent> <Plug>JaSentenceTextObjA :<C-U>call <SID>select_function_wrapper('<SID>select_a', v:count1)<CR>
 
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
@@ -42,9 +42,9 @@ endif
 " TODO: text-object in visual mode
 
 " from vim-textobj-user
-function! s:select_function_wrapper(function_name)
+function! s:select_function_wrapper(function_name, count1)
   let ORIG_POS = getpos('.')
-  let _ = function(a:function_name)()
+  let _ = function(a:function_name)(a:count1)
   if _ is 0
     call setpos('.', ORIG_POS)
     return
@@ -56,7 +56,7 @@ function! s:select_function_wrapper(function_name)
   call setpos('.', end_position)
 endfunction
 
-function! s:select_a()
+function! s:select_a(cnt)
   let origpos = getpos('.')
   let spincluded = 0
   let line = getline('.')
@@ -85,7 +85,7 @@ function! s:select_a()
     call s:BackwardS()
   endif
   let st = getpos('.')
-  call s:MoveCount('<SID>ForwardS')
+  call s:MoveCount('<SID>ForwardS', a:cnt)
 
   " origposがsentence開始直前の空白上だった場合、
   if spincluded
@@ -115,9 +115,8 @@ function! s:select_a()
   return ['v', st, getpos('.')]
 endfunction
 
-function! s:MoveCount(func)
-  let cnt = v:count1
-  for i in range(cnt)
+function! s:MoveCount(func, cnt)
+  for i in range(a:cnt)
     call function(a:func)()
   endfor
 endfunction
