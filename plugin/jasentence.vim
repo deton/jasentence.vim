@@ -21,13 +21,16 @@ endif
 
 nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
 nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
+onoremap <silent> <Plug>JaSentenceMoveOF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
+onoremap <silent> <Plug>JaSentenceMoveOB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
 
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
   nmap <silent> ( <Plug>JaSentenceMoveNB
+  omap <silent> ) <Plug>JaSentenceMoveOF
+  omap <silent> ( <Plug>JaSentenceMoveOB
 endif
 
-" TODO: operator-pending mode
 " TODO: visual mode
 " TODO: text-object
 
