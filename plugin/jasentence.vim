@@ -23,15 +23,18 @@ nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>Forward
 nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
 onoremap <silent> <Plug>JaSentenceMoveOF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
 onoremap <silent> <Plug>JaSentenceMoveOB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
+vnoremap <silent> <Plug>JaSentenceMoveVF <Esc>:call <SID>MoveV('<SID>ForwardS')<CR>
+vnoremap <silent> <Plug>JaSentenceMoveVB <Esc>:call <SID>MoveV('<SID>BackwardS')<CR>
 
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
   nmap <silent> ( <Plug>JaSentenceMoveNB
   omap <silent> ) <Plug>JaSentenceMoveOF
   omap <silent> ( <Plug>JaSentenceMoveOB
+  xmap <silent> ) <Plug>JaSentenceMoveVF
+  xmap <silent> ( <Plug>JaSentenceMoveVB
 endif
 
-" TODO: visual mode
 " TODO: text-object
 
 function! s:MoveCount(func)
@@ -39,6 +42,20 @@ function! s:MoveCount(func)
   for i in range(cnt)
     call function(a:func)()
   endfor
+endfunction
+
+" Forward{S,B}をVisual modeに対応させるためのラッパ
+function! s:MoveV(func)
+  let cnt = v:prevcount
+  if cnt == 0
+    let cnt = 1
+  endif
+  for i in range(cnt)
+    call function(a:func)()
+  endfor
+  let pos = getpos('.')
+  normal! gv
+  call cursor(pos[1], pos[2])
 endfunction
 
 function! s:ForwardS()
