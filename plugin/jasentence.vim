@@ -19,17 +19,24 @@ if exists('g:loaded_jasentence')
   finish
 endif
 
-nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>ForwardS()<CR>
-nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>BackwardS()<CR>
+nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS')<CR>
+nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS')<CR>
+
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
   nmap <silent> ( <Plug>JaSentenceMoveNB
 endif
 
-" TODO: support count
 " TODO: operator-pending mode
 " TODO: visual mode
 " TODO: text-object
+
+function! s:MoveCount(func)
+  let cnt = v:count1
+  for i in range(cnt)
+    call function(a:func)()
+  endfor
+endfunction
 
 function! s:ForwardS()
   let origpos = getpos('.')
