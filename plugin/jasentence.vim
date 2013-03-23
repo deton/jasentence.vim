@@ -1,10 +1,10 @@
 " vi:set ts=8 sts=2 sw=2 tw=0:
 scriptencoding utf-8
 
-" plugin/jasentence.vim - ),(でのsentence移動を「、。」までにするスクリプト。
+" plugin/jasentence.vim - 日本語句読点もsentence終了として扱うスクリプト。
 "
 " Maintainer: KIHARA Hideto <deton@m1.interq.or.jp>
-" Last Change: 2013-03-20
+" Last Change: 2013-03-23
 "
 " Description:
 " * )(での移動時に"。．？！"も文の終わりとみなすようにします。
@@ -19,12 +19,13 @@ if exists('g:loaded_jasentence')
   finish
 endif
 
+nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>ForwardS()<CR>
+nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>BackwardS()<CR>
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
-  nnoremap <silent> ) :<C-U>call <SID>ForwardS()<CR>
-  nnoremap <silent> ( :<C-U>call <SID>BackwardS()<CR>
+  nmap <silent> ) <Plug>JaSentenceMoveNF
+  nmap <silent> ( <Plug>JaSentenceMoveNB
 endif
 
-" TODO: <Plug>
 " TODO: support count
 " TODO: operator-pending mode
 " TODO: visual mode
