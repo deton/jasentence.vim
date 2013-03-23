@@ -26,6 +26,8 @@ onoremap <silent> <Plug>JaSentenceMoveOB :<C-U>call <SID>MoveCount('<SID>Backwar
 vnoremap <silent> <Plug>JaSentenceMoveVF <Esc>:call <SID>MoveV('<SID>ForwardS')<CR>
 vnoremap <silent> <Plug>JaSentenceMoveVB <Esc>:call <SID>MoveV('<SID>BackwardS')<CR>
 
+onoremap <silent> <Plug>JaSentenceTextObjA :<C-U>call <SID>select_function_wrapper('<SID>select_a')<CR>
+
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
   nmap <silent> ( <Plug>JaSentenceMoveNB
@@ -33,9 +35,89 @@ if !get(g:, 'jasentence_no_default_key_mappings', 0)
   omap <silent> ( <Plug>JaSentenceMoveOB
   xmap <silent> ) <Plug>JaSentenceMoveVF
   xmap <silent> ( <Plug>JaSentenceMoveVB
+  omap <silent> as <Plug>JaSentenceTextObjA
 endif
 
-" TODO: text-object
+" TODO: text-object inner sentence
+" TODO: text-object in visual mode
+
+" from vim-textobj-user
+function! s:select_function_wrapper(function_name)
+  let ORIG_POS = getpos('.')
+  let _ = function(a:function_name)()
+  if _ is 0
+    call setpos('.', ORIG_POS)
+    return
+  endif
+  let [motion_type, start_position, end_position] = _
+  execute 'normal!' motion_type
+  call setpos('.', start_position)
+  normal! o
+  call setpos('.', end_position)
+endfunction
+
+function! s:select_a()
+  let origpos = getpos('.')
+  let spincluded = 0
+  let line = getline('.')
+  if line == ''
+  elseif match(line, '\%' . col('.') . 'c[[:space:]　]') != -1
+    " カーソルが空白上の場合
+    call s:ForwardS()
+    let nextsent = getpos('.')
+    call setpos('.', origpos)
+    if search('[\n[:space:]　]\+[^\n[:space:]　]', 'ce') > 0
+      if s:pos_eq(getpos('.'), nextsent)
+	" 次のsentence直前の連続空白上の場合は、空白開始位置以降を対象にする
+	call setpos('.', origpos)
+	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bc')
+	let spincluded = 1
+      else
+	" sentence途中の空白上の場合、sentence開始位置以降を対象にする
+	call setpos('.', origpos)
+	call s:BackwardS()
+      endif
+    endif
+  else
+    " sentence開始位置以降を対象にする
+    call s:BackwardS()
+    let prevsent = getpos('.')
+    call s:ForwardS()
+    if !s:pos_eq(getpos('.'), origpos)
+      call setpos('.', prevsent)
+    endif
+    " else 既にsentence開始位置にいた
+  endif
+  let st = getpos('.')
+  call s:MoveCount('<SID>ForwardS')
+
+  " origposがsentence開始直前の空白上だった場合、
+  if spincluded
+    " 最初のForwardS()で1 count消費してるので、追加で1 count分移動
+    call s:ForwardS()
+    " 次sentence直前の空白は含めない
+    call search('[^[:space:]　]\|^', 'b')
+    return ['v', st, getpos('.')]
+  endif
+
+  if line('.') == line('$')
+    let edtmp = getpos('.')
+    call s:ForwardS()
+    if s:pos_eq(getpos('.'), edtmp)
+      " バッファ末尾
+      return ['v', st, edtmp]
+    endif
+    call setpos('.', edtmp)
+  endif
+  " 次sentence直前まで
+  if col('.') > 1
+    call cursor(0, col('.') - 1)
+  else
+    call cursor(line('.') - 1, 0)
+    call cursor(0, col('$'))
+  endif
+  return ['v', st, getpos('.')]
+endfunction
 
 function! s:MoveCount(func)
   let cnt = v:count1
@@ -76,6 +158,10 @@ endfunction
 
 function! s:pos_lt(pos1, pos2)  " less than
   return a:pos1[1] < a:pos2[1] || a:pos1[1] == a:pos2[1] && a:pos1[2] < a:pos2[2]
+endfunction
+
+function! s:pos_eq(pos1, pos2)  " equal
+  return a:pos1[1] == a:pos2[1] && a:pos1[2] == a:pos2[2]
 endfunction
 
 function! s:BackwardS()
