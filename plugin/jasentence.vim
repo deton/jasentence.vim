@@ -19,6 +19,11 @@ if exists('g:loaded_jasentence')
   finish
 endif
 
+" 日本語sentenceの終了位置特定用パターン
+if !exists('g:jasentence_endpat')
+  let g:jasentence_endpat = '[、。，．？！]\+\n\=\s*'
+endif
+
 nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS', v:count1)<CR>
 nnoremap <silent> <Plug>JaSentenceMoveNB :<C-U>call <SID>MoveCount('<SID>BackwardS', v:count1)<CR>
 onoremap <silent> <Plug>JaSentenceMoveOF :<C-U>call <SID>MoveCount('<SID>ForwardS', v:count1)<CR>
@@ -308,7 +313,7 @@ function! s:ForwardS()
   normal! )
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search('[、。，．？！]\+\n\=\s*\S', 'eW', enpos[1]) == 0
+  if search(g:jasentence_endpat . '\S', 'eW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
@@ -332,7 +337,7 @@ function! s:BackwardS()
   normal! (
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search('[、。，．？！]\+\n\=\s*\zs\S', 'bW', enpos[1]) == 0
+  if search(g:jasentence_endpat . '\zs\S', 'bW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
