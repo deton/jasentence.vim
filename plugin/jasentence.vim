@@ -4,7 +4,7 @@ scriptencoding utf-8
 " plugin/jasentence.vim - 日本語句読点もsentence終了として扱うスクリプト。
 "
 " Maintainer: KIHARA Hideto <deton@m1.interq.or.jp>
-" Last Change: 2013-03-23
+" Last Change: 2013-03-24
 "
 " Description:
 " * )(での移動時に"。．？！"も文の終わりとみなすようにします。
@@ -27,6 +27,7 @@ vnoremap <silent> <Plug>JaSentenceMoveVF <Esc>:call <SID>MoveV('<SID>ForwardS')<
 vnoremap <silent> <Plug>JaSentenceMoveVB <Esc>:call <SID>MoveV('<SID>BackwardS')<CR>
 
 onoremap <silent> <Plug>JaSentenceTextObjA :<C-U>call <SID>select_function_wrapper('<SID>select_a', v:count1)<CR>
+onoremap <silent> <Plug>JaSentenceTextObjI :<C-U>call <SID>select_function_wrapper('<SID>select_i', v:count1)<CR>
 
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
@@ -36,9 +37,9 @@ if !get(g:, 'jasentence_no_default_key_mappings', 0)
   xmap <silent> ) <Plug>JaSentenceMoveVF
   xmap <silent> ( <Plug>JaSentenceMoveVB
   omap <silent> as <Plug>JaSentenceTextObjA
+  omap <silent> is <Plug>JaSentenceTextObjI
 endif
 
-" TODO: text-object inner sentence
 " TODO: text-object in visual mode
 
 " from vim-textobj-user
@@ -57,8 +58,16 @@ function! s:select_function_wrapper(function_name, count1)
 endfunction
 
 function! s:select_a(cnt)
+  return s:select(0, a:cnt)
+endfunction
+
+function! s:select_i(cnt)
+  return s:select(1, a:cnt)
+endfunction
+
+function! s:select(inner, cnt)
   let origpos = getpos('.')
-  let spincluded = 0
+  let startonsp = 0
   let line = getline('.')
   if line == ''
   elseif match(line, '\%' . col('.') . 'c[[:space:]　]') != -1
@@ -71,7 +80,7 @@ function! s:select_a(cnt)
 	" 次のsentence直前の連続空白上の場合は、空白開始位置以降を対象にする
 	call setpos('.', origpos)
 	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bc')
-	let spincluded = 1
+	let startonsp = 1
       else
 	" sentence途中の空白上の場合、sentence開始位置以降を対象にする
 	call setpos('.', origpos)
@@ -80,31 +89,66 @@ function! s:select_a(cnt)
     endif
   else
     " sentence開始位置以降を対象にする
-    " (s:BackwardS()だけだと、既にsentence先頭にいる場合に問題あり)
-    call s:ForwardS()
+    call s:ForwardS() " 既にsentence先頭にいる場合用
     call s:BackwardS()
   endif
   let st = getpos('.')
-  call s:MoveCount('<SID>ForwardS', a:cnt)
+  let cnt = a:cnt
+  let trimendsp = 0
+  if a:inner
+    if startonsp && a:cnt == 1 " sentence開始直前の連続空白のみを対象にする
+      call s:ForwardS()
+      return ['v', st, s:PrevSentEndPos()]
+    endif
+    " innerの場合はsentence間の空白もcountを消費する。
+    " 日本語の場合はsentence間に空白が無い場合があるが、+kaoriya版と同様に消費
+    if startonsp " sentence開始直前の連続空白上で開始した場合
+      let cnt = a:cnt / 2
+      let cnt += 1 " sentence開始位置への移動用に1 count追加
+      if a:cnt % 2 == 0
+	let trimendsp = 1 " 指定されたcountが偶数ならtrimする
+      else
+	let trimendsp = 0
+      endif
+    else
+      let cnt = (a:cnt + 1) / 2
+      if a:cnt % 2 == 0
+	let trimendsp = 0
+      else
+	let trimendsp = 1
+      endif
+    endif
+  elseif startonsp
+    " sentence開始直前の連続空白上だった場合、
+    " sentence開始位置への移動で1 count消費するので、1 count追加
+    let cnt += 1
+    let trimendsp = 1
+  endif
+  call s:MoveCount('<SID>ForwardS', cnt)
 
-  " origposがsentence開始直前の空白上だった場合、
-  if spincluded
-    " 最初のForwardS()で1 count消費してるので、追加で1 count分移動
-    call s:ForwardS()
+  if trimendsp
     " 次sentence直前の空白は含めない
     call search('[^[:space:]　]\|^', 'b')
     return ['v', st, getpos('.')]
   endif
 
+  return ['v', st, s:PrevSentEndPos()]
+endfunction
+
+" 前のsentenceの末尾位置を返す。
+" 前提条件: sentence開始位置にカーソルがある
+function! s:PrevSentEndPos()
+  " バッファ末尾の場合に末尾の文字だけが残ったりしないように
   if line('.') == line('$')
     let edtmp = getpos('.')
     call s:ForwardS()
     if s:pos_eq(getpos('.'), edtmp)
       " バッファ末尾
-      return ['v', st, edtmp]
+      return edtmp
     endif
     call setpos('.', edtmp)
   endif
+
   " 次sentence直前まで
   if col('.') > 1
     call cursor(0, col('.') - 1)
@@ -112,7 +156,7 @@ function! s:select_a(cnt)
     call cursor(line('.') - 1, 0)
     call cursor(0, col('$'))
   endif
-  return ['v', st, getpos('.')]
+  return getpos('.')
 endfunction
 
 function! s:MoveCount(func, cnt)
