@@ -75,11 +75,11 @@ function! s:select(inner, cnt)
     call s:ForwardS()
     let nextsent = getpos('.')
     call setpos('.', origpos)
-    if search('[\n[:space:]　]\+[^\n[:space:]　]', 'ce') > 0
+    if search('[\n[:space:]　]\+[^\n[:space:]　]', 'ceW') > 0
       if s:pos_eq(getpos('.'), nextsent)
 	" 次のsentence直前の連続空白上の場合は、空白開始位置以降を対象にする
 	call setpos('.', origpos)
-	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bc')
+	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bcW')
 	let startonsp = 1
       else
 	" sentence途中の空白上の場合、sentence開始位置以降を対象にする
@@ -91,6 +91,7 @@ function! s:select(inner, cnt)
     " sentence開始位置以降を対象にする
     call s:ForwardS() " 既にsentence先頭にいる場合用
     call s:BackwardS()
+    " FIXME: バッファ末尾に1文字だけある場合、直前のsentenceが対象になる
   endif
   let st = getpos('.')
   let cnt = a:cnt
@@ -128,7 +129,8 @@ function! s:select(inner, cnt)
 
   if trimendsp
     " 次sentence直前の空白は含めない
-    call search('[^[:space:]　]\|^', 'b')
+    " FIXME: バッファ末尾で最後の文字が対象外になる
+    call search('[^[:space:]　]\|^', 'bW')
     return ['v', st, getpos('.')]
   endif
 
