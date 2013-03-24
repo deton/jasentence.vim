@@ -128,29 +128,39 @@ function! s:select(inner, cnt)
   call s:MoveCount('<SID>ForwardS', cnt)
 
   if trimendsp
-    " 次sentence直前の空白は含めない
-    " FIXME: バッファ末尾で最後の文字が対象外になる
-    call search('[^[:space:]　]\|^', 'bW')
+    " 現在位置(対象文字列直後のsentence開始位置)直前の空白は含めない。
+    " 現在位置がバッファ末尾かつ空白でない場合は、最後の文字が残らないように。
+    if !(s:bufend() && match(getline('.'), '\%' . col('.') . 'c[[:space:]　]') == -1)
+      call search('[^[:space:]　]\|^', 'bW')
+    endif
     return ['v', st, getpos('.')]
   endif
 
   return ['v', st, s:PrevSentEndPos()]
 endfunction
 
+" バッファ末尾かどうか
+function! s:bufend()
+  if line('.') != line('$')
+    return 0
+  endif
+  let edtmp = getpos('.')
+  call s:ForwardS()
+  let pos = getpos('.')
+  if s:pos_eq(pos, edtmp)
+    return 1
+  endif
+  call setpos('.', edtmp)
+  return 0
+endfunction
+
 " 前のsentenceの末尾位置を返す。
 " 前提条件: sentence開始位置にカーソルがある
 function! s:PrevSentEndPos()
   " バッファ末尾の場合に末尾の文字だけが残ったりしないように
-  if line('.') == line('$')
-    let edtmp = getpos('.')
-    call s:ForwardS()
-    if s:pos_eq(getpos('.'), edtmp)
-      " バッファ末尾
-      return edtmp
-    endif
-    call setpos('.', edtmp)
+  if s:bufend()
+    return getpos('.')
   endif
-
   " 次sentence直前まで
   if col('.') > 1
     call cursor(0, col('.') - 1)
