@@ -28,6 +28,8 @@ vnoremap <silent> <Plug>JaSentenceMoveVB <Esc>:call <SID>MoveV('<SID>BackwardS')
 
 onoremap <silent> <Plug>JaSentenceTextObjA :<C-U>call <SID>select_function_wrapper('<SID>select_a', v:count1)<CR>
 onoremap <silent> <Plug>JaSentenceTextObjI :<C-U>call <SID>select_function_wrapper('<SID>select_i', v:count1)<CR>
+vnoremap <silent> <Plug>JaSentenceTextObjVA <Esc>:call <SID>select_function_wrapperv('<SID>select_a', 0)<CR>
+vnoremap <silent> <Plug>JaSentenceTextObjVI <Esc>:call <SID>select_function_wrapperv('<SID>select_i', 1)<CR>
 
 if !get(g:, 'jasentence_no_default_key_mappings', 0)
   nmap <silent> ) <Plug>JaSentenceMoveNF
@@ -38,14 +40,14 @@ if !get(g:, 'jasentence_no_default_key_mappings', 0)
   xmap <silent> ( <Plug>JaSentenceMoveVB
   omap <silent> as <Plug>JaSentenceTextObjA
   omap <silent> is <Plug>JaSentenceTextObjI
+  xmap <silent> as <Plug>JaSentenceTextObjVA
+  xmap <silent> is <Plug>JaSentenceTextObjVI
 endif
-
-" TODO: text-object in visual mode
 
 " from vim-textobj-user
 function! s:select_function_wrapper(function_name, count1)
   let ORIG_POS = getpos('.')
-  let _ = function(a:function_name)(a:count1)
+  let _ = function(a:function_name)(a:count1, 0)
   if _ is 0
     call setpos('.', ORIG_POS)
     return
@@ -57,53 +59,85 @@ function! s:select_function_wrapper(function_name, count1)
   call setpos('.', end_position)
 endfunction
 
-function! s:select_a(cnt)
-  return s:select(0, a:cnt)
-endfunction
+function! s:select_function_wrapperv(function_name, inner)
+  let cnt = v:prevcount
+  if cnt == 0
+    let cnt = 1
+  endif
+  " 何も選択されていない場合、textobj選択
+  let pos = getpos('.')
+  execute 'normal! gvo' . "\<Esc>"
+  let otherpos = getpos('.')
+  execute 'normal! gvo' . "\<Esc>"
+  if pos == otherpos
+    call s:select_function_wrapper(a:function_name, cnt)
+    return
+  endif
 
-function! s:select_i(cnt)
-  return s:select(1, a:cnt)
-endfunction
-
-function! s:select(inner, cnt)
-  let origpos = getpos('.')
-  let startonsp = 0
-  let line = getline('.')
-  if line == ''
-  elseif match(line, '\%' . col('.') . 'c[[:space:]　]') != -1
-    " カーソルが空白上の場合
-    call s:ForwardS()
-    let nextsent = getpos('.')
-    call setpos('.', origpos)
-    if search('[\n[:space:]　]\+[^\n[:space:]　]', 'ceW') > 0
-      if s:pos_eq(getpos('.'), nextsent)
-	" 次のsentence直前の連続空白上の場合は、空白開始位置以降を対象にする
-	call setpos('.', origpos)
-	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bcW')
-	let startonsp = 1
-      else
-	" sentence途中の空白上の場合、sentence開始位置以降を対象にする
-	call setpos('.', origpos)
-	call s:BackwardS()
-      endif
+  " 選択済の場合、選択領域をextendする
+  if s:pos_lt(pos, otherpos)
+    " backward
+    " TODO
+    if a:inner
+      call s:select_i_b(cnt)
+    else
+      call s:select_a_b(cnt)
     endif
   else
-    " sentence開始位置以降を対象にする
-    call s:ForwardS() " 既にsentence先頭にいる場合用
-    call s:BackwardS()
-    " FIXME: バッファ末尾に1文字だけある場合、直前のsentenceが対象になる
+    if a:inner
+      call s:select_i(cnt, 1)
+    else
+      call s:select_a(cnt, 1)
+    endif
+  endif
+  let newpos = getpos('.')
+  normal! gv
+  call setpos('.', newpos)
+endfunction
+
+function! s:select_a(cnt, visual)
+  return s:select(a:cnt, 0, a:visual)
+endfunction
+
+function! s:select_i(cnt, visual)
+  return s:select(a:cnt, 1, a:visual)
+endfunction
+
+function! s:select(cnt, inner, visual)
+  let origpos = getpos('.')
+  let startonsp = 0
+  if a:visual
+    call search('.', 'W') " 繰り返しas/isした場合にextendするため
+    if s:postype() == 1
+      let startonsp = 1
+    endif
+  else
+    let postype = s:postype()
+    if postype == 1
+      " 次のsentence直前の連続空白上の場合は、空白開始位置以降を対象にする
+      call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bcW')
+      let startonsp = 1
+    elseif postype == 2
+      " sentence途中の空白上の場合、sentence開始位置以降を対象にする
+      call s:BackwardS()
+    elseif postype == 4
+      " sentence開始位置以降を対象にする
+      call s:ForwardS() " 既にsentence先頭にいる場合用
+      call s:BackwardS()
+      " FIXME: バッファ末尾に1文字だけある場合、直前のsentenceが対象になる
+    endif
   endif
   let st = getpos('.')
   let cnt = a:cnt
   let trimendsp = 0
   if a:inner
-    if startonsp && a:cnt == 1 " sentence開始直前の連続空白のみを対象にする
-      call s:ForwardS()
-      return ['v', st, s:PrevSentEndPos()]
-    endif
     " innerの場合はsentence間の空白もcountを消費する。
     " 日本語の場合はsentence間に空白が無い場合があるが、+kaoriya版と同様に消費
     if startonsp " sentence開始直前の連続空白上で開始した場合
+      if a:cnt == 1 " sentence開始直前の連続空白のみを対象にする
+	call s:ForwardS()
+	return ['v', st, s:PrevSentEndPos()]
+      endif
       let cnt = a:cnt / 2
       let cnt += 1 " sentence開始位置への移動用に1 count追加
       if a:cnt % 2 == 0
@@ -138,7 +172,7 @@ function! s:select(inner, cnt)
 
   let ed = s:PrevSentEndPos()
   " "as"で対象文字列末尾が空白でない場合、開始位置直前に空白があれば含める
-  if !a:inner && !startonsp && match(getline('.'), '\%' . col('.') . 'c[[:space:]　]') == -1
+  if !a:visual && !a:inner && !startonsp && match(getline('.'), '\%' . col('.') . 'c[[:space:]　]') == -1
     call setpos('.', st)
     " 日本語の場合は空白無しの場合があるので開始位置前の空白以外の文字をsearch
     if search('[^\n[:space:]　]', 'bW') > 0
@@ -147,6 +181,33 @@ function! s:select(inner, cnt)
     let st = getpos('.')
   endif
   return ['v', st, ed]
+endfunction
+
+" 現在のカーソル位置の種別を返す
+function! s:postype()
+  let origpos = getpos('.')
+  let line = getline('.')
+  if line == ''
+    let ret = 0 " 空行上
+  elseif match(line, '\%' . col('.') . 'c[[:space:]　]') != -1
+    " カーソルが空白上の場合
+    call s:ForwardS()
+    let nextsent = getpos('.')
+    call setpos('.', origpos)
+    if search('[\n[:space:]　]\+[^\n[:space:]　]', 'ceW') > 0
+      if s:pos_eq(getpos('.'), nextsent)
+	let ret = 1 " 次のsentence直前の連続空白上
+      else
+	let ret = 2 " sentence途中の空白上
+      endif
+    else
+      let ret = 3 " バッファ末尾の空白上
+    endif
+  else
+    let ret = 4 " sentence内
+  endif
+  call setpos('.', origpos)
+  return ret
 endfunction
 
 " バッファ末尾かどうか
