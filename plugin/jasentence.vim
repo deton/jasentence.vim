@@ -77,11 +77,10 @@ function! s:select_function_wrapperv(function_name, inner)
   " 選択済の場合、選択領域をextendする
   if s:pos_lt(pos, otherpos)
     " backward
-    " TODO
     if a:inner
-      call s:select_i_b(cnt)
+      call s:select_b(cnt, 1)
     else
-      call s:select_a_b(cnt)
+      call s:select_b(cnt, 0)
     endif
   else
     if a:inner
@@ -181,6 +180,48 @@ function! s:select(cnt, inner, visual)
     let st = getpos('.')
   endif
   return ['v', st, ed]
+endfunction
+
+function! s:select_b(cnt, inner)
+  let origpos = getpos('.')
+  let startonsp = 0
+  call search('.', 'bW') " 繰り返しas/isした場合にextendするため
+  if s:postype() == 1
+    let startonsp = 1
+  endif
+  let st = getpos('.')
+  let cnt = a:cnt
+  let extendbegsp = 1
+  if a:inner
+    let cnt = (a:cnt + 1) / 2
+    if startonsp
+      let cnt -= 1 " 開始位置の空白に対するcountを減らす
+      if cnt <= 0 " 空白のみを選択する
+	call search('[^\n[:space:]　]\zs[\n[:space:]　]', 'bcW')
+	return ['v', st, getpos('.')]
+      endif
+      if a:cnt % 2 == 0
+	let extendbegsp = 0
+      else
+	let extendbegsp = 1 " 指定されたcountが奇数なら直前の空白も含める
+      endif
+    else
+      if a:cnt % 2 == 0
+	let extendbegsp = 1
+      else
+	let extendbegsp = 0
+      endif
+    endif
+  elseif startonsp
+    let extendbegsp = 0
+  endif
+  call s:MoveCount('<SID>BackwardS', cnt)
+
+  " 現在位置直前の空白を含める
+  if extendbegsp && search('[^\n[:space:]　]', 'bW') > 0
+    call search('.', 'W')
+  endif
+  return ['v', st, getpos('.')]
 endfunction
 
 " 現在のカーソル位置の種別を返す
