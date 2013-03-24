@@ -136,7 +136,17 @@ function! s:select(inner, cnt)
     return ['v', st, getpos('.')]
   endif
 
-  return ['v', st, s:PrevSentEndPos()]
+  let ed = s:PrevSentEndPos()
+  " "as"で対象文字列末尾が空白でない場合、開始位置直前に空白があれば含める
+  if !a:inner && !startonsp && match(getline('.'), '\%' . col('.') . 'c[[:space:]　]') == -1
+    call setpos('.', st)
+    " 日本語の場合は空白無しの場合があるので開始位置前の空白以外の文字をsearch
+    if search('[^\n[:space:]　]', 'bW') > 0
+      call search('.', 'W')
+    endif
+    let st = getpos('.')
+  endif
+  return ['v', st, ed]
 endfunction
 
 " バッファ末尾かどうか
