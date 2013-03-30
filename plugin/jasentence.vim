@@ -4,7 +4,7 @@ scriptencoding utf-8
 " plugin/jasentence.vim - 日本語句読点もsentence終了として扱うスクリプト。
 "
 " Maintainer: KIHARA Hideto <deton@m1.interq.or.jp>
-" Last Change: 2013-03-24
+" Last Change: 2013-03-30
 "
 " Description:
 " * )(での移動時に"。．？！"も文の終わりとみなすようにします。
@@ -21,7 +21,7 @@ endif
 
 " 日本語sentenceの終了位置特定用パターン
 if !exists('g:jasentence_endpat')
-  let g:jasentence_endpat = '[、。，．？！]\+\n\=\s*'
+  let g:jasentence_endpat = '[、。，．？！]\+'
 endif
 
 nnoremap <silent> <Plug>JaSentenceMoveNF :<C-U>call <SID>MoveCount('<SID>ForwardS', v:count1)<CR>
@@ -313,7 +313,7 @@ function! s:ForwardS()
   normal! )
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search(g:jasentence_endpat . '\S', 'eW', enpos[1]) == 0
+  if search(g:jasentence_endpat . '[\n[:space:]　]*[^[:space:]　]', 'eW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
@@ -337,7 +337,7 @@ function! s:BackwardS()
   normal! (
   let enpos = getpos('.')
   call setpos('.', origpos)
-  if search(g:jasentence_endpat . '\zs\S', 'bW', enpos[1]) == 0
+  if search('\%(' . g:jasentence_endpat . '\|^\)[\n[:space:]　]*\zs[^[:space:]　]', 'bW', enpos[1]) == 0
     call setpos('.', enpos)
     return
   endif
