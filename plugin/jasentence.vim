@@ -313,6 +313,12 @@ function! s:ForwardS()
   normal! )
   let enpos = getpos('.')
   call setpos('.', origpos)
+  " 全角空白上の場合、blankとみなして、次のnon-blank char上に移動
+  if match(getline('.'), '\%' . col('.') . 'c　') != -1
+    if search('[^\n[:space:]　]', 'W', enpos[1]) != 0
+      return
+    endif
+  endif
   if search(g:jasentence_endpat . '[\n[:space:]　]*[^[:space:]　]', 'eW', enpos[1]) == 0
     call setpos('.', enpos)
     return
@@ -322,6 +328,10 @@ function! s:ForwardS()
     return
   endif
   call setpos('.', enpos)
+  " 全角空白はblankとみなす
+  if match(getline('.'), '\%' . col('.') . 'c　') != -1
+    call search('[^\n[:space:]　]', 'W')
+  endif
 endfunction
 
 function! s:pos_lt(pos1, pos2)  " less than
@@ -339,6 +349,10 @@ function! s:BackwardS()
   call setpos('.', origpos)
   if search('\%(' . g:jasentence_endpat . '\|^\)[\n[:space:]　]*\zs[^[:space:]　]', 'bW', enpos[1]) == 0
     call setpos('.', enpos)
+    " 全角空白はblankとみなす
+    if match(getline('.'), '\%' . col('.') . 'c　') != -1
+      call search('[^\n[:space:]　]', 'bW')
+    endif
     return
   endif
   let japos = getpos('.')
