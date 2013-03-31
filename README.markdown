@@ -16,6 +16,10 @@ jasentence.vimは、)(によるsentence移動時に"、。"も
 関連
 ====
 
+* [句読点に移動するmap](https://gist.github.com/deton/5138905#ftr-1)
+
+    f,tを使った「。、」への移動を、`f<C-J>`等にmapしておく設定例
+
 * [jasegment.vim](https://github.com/deton/jasegment.vim)
 
     日本語文章でのWORD移動(W,E,B)を文節単位にするスクリプト
