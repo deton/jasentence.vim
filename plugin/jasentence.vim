@@ -4,7 +4,7 @@ scriptencoding utf-8
 " plugin/jasentence.vim - 日本語句読点もsentence終了として扱うスクリプト。
 "
 " Maintainer: KIHARA Hideto <deton@m1.interq.or.jp>
-" Last Change: 2013-03-30
+" Last Change: 2013-05-08
 "
 " Description:
 " * )(での移動時に"、。，．？！"も文の終わりとみなすようにします。
@@ -290,7 +290,7 @@ endfunction
 
 function! s:MoveCount(func, cnt)
   for i in range(a:cnt)
-    call function(a:func)()
+    call call(a:func, [])
   endfor
 endfunction
 
